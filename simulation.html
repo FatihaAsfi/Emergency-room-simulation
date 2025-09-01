@@ -3,600 +3,672 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ER Simulation – Priority Triage (HTML/CSS/JS)</title>
+<title>Yale ER Simulation - Fixed</title>
 <style>
   :root{
-    --bg:#0f172a;       /* slate-900 */
-    --card:#111827;     /* gray-900 */
-    --muted:#94a3b8;    /* slate-400 */
-    --text:#e5e7eb;     /* gray-200 */
-    --accent:#22c55e;   /* green-500 */
-    --blue:#3b82f6;     /* blue-500 */
-    --red:#ef4444;      /* red-500 */
-    --amber:#f59e0b;    /* amber-500 */
+    --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
+    --accent:#22c55e; --blue:#3b82f6; --red:#ef4444; --amber:#f59e0b;
     --ring:rgba(255,255,255,.08);
   }
   *{box-sizing:border-box}
   body{
     margin:0; background:linear-gradient(135deg,#0b1022,#0f172a 30%,#0b1022);
-    color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
-    min-height:100svh; display:flex; justify-content:center; padding:20px;
+    color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto;
+    min-height:100vh; display:flex; justify-content:center; padding:20px;
   }
-  .wrap{width:100%; max-width:1100px; display:grid; gap:16px; grid-template-columns: 1.1fr .9fr;}
+  .wrap{width:100%; max-width:1200px; display:grid; gap:16px; grid-template-columns: 1fr 1fr;}
   @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
 
   .card{
     background:linear-gradient(180deg,rgba(255,255,255,.03),transparent 60%), var(--card);
     border:1px solid var(--ring); border-radius:16px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,.35);
   }
-  header.card{display:flex; align-items:center; justify-content:space-between; gap:14px}
-  header h1{margin:0; font-size:clamp(18px,3vw,24px)}
+  header.card{grid-column:1/-1; display:flex; align-items:center; justify-content:space-between;}
+  h1{margin:0; font-size:24px}
   .subtitle{color:var(--muted); font-size:14px}
 
-  .controls{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:end}
-  @media (max-width:700px){ .controls{grid-template-columns:1fr 1fr} }
-  .control{display:flex; flex-direction:column; gap:6px}
+  .scenarios{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px}
+  .scenario-btn{
+    padding:12px; border-radius:12px; border:1px solid var(--ring);
+    background:#0b1224; color:var(--text); cursor:pointer; transition:all .2s;
+    text-align:center; position:relative;
+  }
+  .scenario-btn.active{border-color:var(--blue); background:rgba(59,130,246,.1)}
+  .scenario-btn:hover{transform:translateY(-2px)}
+  .scenario-title{font-weight:700; margin-bottom:4px; font-size:14px}
+  .scenario-desc{font-size:11px; color:var(--muted); margin-bottom:6px}
+  .scenario-kpi{font-size:10px; color:var(--muted)}
+
+  .status-dot{
+    position:absolute; top:8px; right:8px; width:10px; height:10px; border-radius:50%;
+  }
+  .status-critical{background:var(--red)}
+  .status-stable{background:var(--accent)}
+
+  .controls{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0}
+  .control{display:flex; flex-direction:column; gap:4px}
   label{font-size:12px; color:var(--muted)}
-  input[type="number"], select{
-    background:#0b1224; color:var(--text); padding:10px; border-radius:10px; border:1px solid var(--ring);
-    outline:none;
+  input, select{
+    background:#0b1224; color:var(--text); padding:8px; border-radius:8px; 
+    border:1px solid var(--ring); outline:none; font-size:14px;
   }
   .btn{
-    padding:12px 14px; border-radius:12px; border:1px solid var(--ring);
+    padding:10px 14px; border-radius:10px; border:1px solid var(--ring);
     background:#0b1224; color:var(--text); cursor:pointer; font-weight:600;
-    transition:transform .08s ease, background .2s ease, box-shadow .2s ease;
+    transition:all .2s; font-size:14px;
   }
   .btn:hover{transform:translateY(-1px)}
-  .btn:active{transform:translateY(0)}
   .primary{background:var(--blue)}
   .danger{background:var(--red)}
-  .ghost{background:#0b1224}
+  .success{background:var(--accent)}
+
+  .btn-row{display:flex; gap:8px; margin-top:12px}
   .chip{display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border-radius:999px;
         background:#0b1224; border:1px solid var(--ring); color:var(--muted); font-size:12px}
 
-  .grid{display:grid; gap:12px}
-  .grid.cols-2{grid-template-columns:1fr 1fr}
-  @media (max-width:980px){ .grid.cols-2{grid-template-columns:1fr} }
+  .kpi{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:16px 0}
+  @media (max-width:768px){ .kpi{grid-template-columns:repeat(2,1fr)} }
+  .kpi .tile{background:#0b1224; border:1px solid var(--ring); border-radius:10px; padding:12px; text-align:center}
+  .kpi .label{font-size:11px; color:var(--muted); margin-bottom:4px}
+  .kpi .val{font-size:18px; font-weight:800}
 
-  .kpi{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-  @media (max-width:980px){ .kpi{grid-template-columns:repeat(2,1fr)} }
-  .kpi .tile{background:#0b1224; border:1px solid var(--ring); border-radius:14px; padding:12px}
-  .kpi .label{font-size:12px; color:var(--muted)}
-  .kpi .val{font-size:20px; font-weight:800}
-
-  .queue-list{display:flex; flex-direction:column; gap:8px; max-height:360px; overflow:auto; padding-right:6px}
-  .pat{
+  .queue-section{max-height:300px; overflow-y:auto; margin:12px 0}
+  .patient-card{
     display:flex; justify-content:space-between; align-items:center; gap:12px;
-    background:#0b1224; border:1px solid var(--ring); border-radius:12px; padding:10px 12px;
+    background:#0b1224; border:1px solid var(--ring); border-radius:10px; 
+    padding:8px 12px; margin-bottom:6px;
   }
-  .sev{padding:4px 8px; border-radius:10px; font-size:12px; font-weight:700}
+  .sev{padding:3px 8px; border-radius:8px; font-size:11px; font-weight:700; color:white}
   .sev.critical{background:var(--red)}
   .sev.serious{background:var(--amber)}
   .sev.mild{background:var(--accent)}
-  .muted{color:var(--muted)}
 
-  .now-serving{display:flex; flex-wrap:wrap; gap:8px}
-  .now-card{
-    flex:1 1 220px; background:#0b1224; border:1px solid var(--ring);
-    border-radius:12px; padding:10px; display:flex; justify-content:space-between; align-items:center;
+  .doctor-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:8px; margin:12px 0}
+  .doctor-card{
+    background:#0b1224; border:1px solid var(--ring); border-radius:10px; padding:12px;
   }
-  .bar{height:8px; background:#1f2937; border-radius:999px; overflow:hidden; margin-top:8px}
-  .bar > div{height:100%; background:linear-gradient(90deg, var(--blue), #60a5fa)}
+  .progress-bar{height:6px; background:#374151; border-radius:3px; overflow:hidden; margin-top:6px}
+  .progress-fill{height:100%; background:linear-gradient(90deg, var(--blue), #60a5fa); transition:width .5s}
 
-  .chart{
-    background:#0b1224; border:1px solid var(--ring); border-radius:14px; padding:10px;
-  }
-  .chart h3{margin:0 0 10px 0; font-size:14px; color:var(--muted)}
-  svg{width:100%; height:220px; display:block}
-  .footnote{color:var(--muted); font-size:12px}
-  .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  svg{width:100%; height:180px; display:block; background:#0b1224; border-radius:10px}
+  .chart-container{margin:16px 0}
+  .chart-title{font-size:14px; color:var(--muted); margin-bottom:8px}
+
+  .alert{padding:12px; border-radius:10px; margin:8px 0; border-left:4px solid;}
+  .alert.critical{background:rgba(239,68,68,.1); border-color:var(--red); color:#fca5a5}
+  .alert.success{background:rgba(34,197,94,.1); border-color:var(--accent); color:#86efac}
+  .alert.warning{background:rgba(245,158,11,.1); border-color:var(--amber); color:#fcd34d}
+
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas}
+  .text-center{text-align:center}
+  .mt-2{margin-top:8px}
+  .mb-2{margin-bottom:8px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- LEFT: Simulation core -->
-    <div class="grid">
-      <header class="card">
-        <div>
-          <h1>🏥 Emergency Room Simulation</h1>
-          <div class="subtitle">Priority triage • Multi-doctor • Live stats & charts</div>
-        </div>
-        <div class="chip"><span>Sim time:</span><strong class="mono" id="simTime">0.0 min</strong></div>
-      </header>
+<div class="wrap">
+  <header class="card">
+    <div>
+      <h1>ER Crisis Simulation</h1>
+      <div class="subtitle">Emergency Department Capacity Analysis - Study Scenarios</div>
+    </div>
+    <div class="chip">Time: <span class="mono" id="simTime">0.0 min</span></div>
+  </header>
 
-      <div class="card">
-        <div class="controls">
-          <div class="control">
-            <label>Doctors (servers)</label>
-            <input id="numDoctors" type="number" min="1" max="10" value="3"/>
-          </div>
-          <div class="control">
-            <label>Arrival rate λ (patients / min)</label>
-            <input id="arrivalRate" type="number" step="0.1" min="0" value="1.2"/>
-          </div>
-          <div class="control">
-            <label>Sim speed (× real time)</label>
-            <select id="speed">
-              <option value="10">10×</option>
-              <option value="30" selected>30×</option>
-              <option value="60">60×</option>
-              <option value="120">120×</option>
-            </select>
-          </div>
-          <div class="control">
-            <label>Auto arrivals</label>
-            <select id="autoArrivals">
-              <option value="on" selected>On</option>
-              <option value="off">Off</option>
-            </select>
-          </div>
+  <div class="card">
+    <h3 class="subtitle mb-2">Study Scenarios</h3>
+    <div class="scenarios">
+      <button class="scenario-btn active" data-scenario="crisis">
+        <div class="status-dot status-critical"></div>
+        <div class="scenario-title">Crisis</div>
+        <div class="scenario-desc">Baseline conditions</div>
+        <div class="scenario-kpi">3 docs, high load</div>
+      </button>
+      <button class="scenario-btn" data-scenario="staffing">
+        <div class="status-dot status-stable"></div>
+        <div class="scenario-title">+2 Doctors</div>
+        <div class="scenario-desc">More capacity</div>
+        <div class="scenario-kpi">5 docs, same load</div>
+      </button>
+      <button class="scenario-btn" data-scenario="process">
+        <div class="status-dot status-stable"></div>
+        <div class="scenario-title">Process Fix</div>
+        <div class="scenario-desc">Efficiency gains</div>
+        <div class="scenario-kpi">4 docs, faster</div>
+      </button>
+    </div>
 
-          <div class="control">
-            <label>Service mean – Critical (min)</label>
-            <input id="svcCritical" type="number" step="0.1" min="0.1" value="12"/>
-          </div>
-          <div class="control">
-            <label>Service mean – Serious (min)</label>
-            <input id="svcSerious" type="number" step="0.1" min="0.1" value="7"/>
-          </div>
-          <div class="control">
-            <label>Service mean – Mild (min)</label>
-            <input id="svcMild" type="number" step="0.1" min="0.1" value="3.5"/>
-          </div>
-
-          <button class="btn ghost" id="addPatientBtn">+ Add random patient</button>
-          <button class="btn primary" id="startBtn">▶ Start</button>
-          <button class="btn" id="stopBtn">⏸ Stop</button>
-          <button class="btn danger" id="resetBtn">↺ Reset</button>
-        </div>
+    <div class="controls">
+      <div class="control">
+        <label>Doctors</label>
+        <input id="doctors" type="number" min="1" max="8" value="3">
       </div>
-
-      <div class="card">
-        <h3 class="subtitle" style="margin-bottom:8px">Now Treating</h3>
-        <div class="now-serving" id="nowServing"></div>
+      <div class="control">
+        <label>Arrivals/Hour</label>
+        <input id="arrivals" type="number" min="5" max="100" value="30">
       </div>
-
-      <div class="card">
-        <h3 class="subtitle" style="margin-bottom:8px">Waiting Queue (priority: Critical → Serious → Mild)</h3>
-        <div class="queue-list" id="queueList"></div>
+      <div class="control">
+        <label>Simulation Speed</label>
+        <select id="speed">
+          <option value="1">Normal</option>
+          <option value="5" selected>5x Fast</option>
+          <option value="10">10x Fast</option>
+        </select>
       </div>
     </div>
 
-    <!-- RIGHT: KPIs & Charts -->
-    <div class="grid">
-      <div class="card">
-        <div class="kpi">
-          <div class="tile">
-            <div class="label">Arrivals</div>
-            <div class="val" id="kArrivals">0</div>
-          </div>
-          <div class="tile">
-            <div class="label">Treated</div>
-            <div class="val" id="kTreated">0</div>
-          </div>
-          <div class="tile">
-            <div class="label">Avg wait (min)</div>
-            <div class="val" id="kAvgWait">0.0</div>
-          </div>
-          <div class="tile">
-            <div class="label">Max wait (min)</div>
-            <div class="val" id="kMaxWait">0.0</div>
-          </div>
-          <div class="tile">
-            <div class="label">Utilization</div>
-            <div class="val" id="kUtil">0%</div>
-          </div>
-          <div class="tile">
-            <div class="label">In service</div>
-            <div class="val" id="kInService">0</div>
-          </div>
-          <div class="tile">
-            <div class="label">In queue</div>
-            <div class="val" id="kInQueue">0</div>
-          </div>
-          <div class="tile">
-            <div class="label">Throughput (pt/min)</div>
-            <div class="val" id="kThroughput">0.00</div>
-          </div>
-        </div>
-      </div>
+    <div class="btn-row">
+      <button class="btn primary" id="startBtn">Start Simulation</button>
+      <button class="btn" id="stopBtn">Pause</button>
+      <button class="btn danger" id="resetBtn">Reset</button>
+      <button class="btn" id="addPatientBtn">Add Patient</button>
+    </div>
 
-      <div class="card chart">
-        <h3>Queue length over time</h3>
-        <svg id="queueChart" viewBox="0 0 600 220" preserveAspectRatio="none"></svg>
-        <div class="footnote">Updates every ~5 simulated seconds.</div>
-      </div>
+    <div id="status" class="alert success">Ready to start simulation</div>
+  </div>
 
-      <div class="card chart">
-        <h3>Treated by severity</h3>
-        <svg id="barChart" viewBox="0 0 600 220" preserveAspectRatio="none"></svg>
+  <div class="card">
+    <h3 class="subtitle">Key Metrics</h3>
+    <div class="kpi">
+      <div class="tile">
+        <div class="label">Arrivals</div>
+        <div class="val" id="totalArrivals">0</div>
       </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 8px 0" class="subtitle">How to test scenarios</h3>
-        <ul style="margin:0 0 8px 18px; color:var(--muted)">
-          <li>Increase <strong>λ (arrival rate)</strong> to stress the system and watch queuing grow.</li>
-          <li>Add <strong>Doctors</strong> to reduce wait and raise throughput.</li>
-          <li>Change <strong>service means</strong> per severity to simulate different protocols.</li>
-          <li>Turn <strong>Auto arrivals Off</strong> for manual patient entry.</li>
-        </ul>
-        <div class="footnote">Tip: run ~10 simulated minutes to get stable averages.</div>
+      <div class="tile">
+        <div class="label">Treated</div>
+        <div class="val" id="totalTreated">0</div>
+      </div>
+      <div class="tile">
+        <div class="label">In Queue</div>
+        <div class="val" id="queueLength">0</div>
+      </div>
+      <div class="tile">
+        <div class="label">Avg Wait (min)</div>
+        <div class="val" id="avgWait">0</div>
+      </div>
+      <div class="tile">
+        <div class="label">Traffic ρ</div>
+        <div class="val" id="trafficIntensity">0.00</div>
+      </div>
+      <div class="tile">
+        <div class="label">Utilization</div>
+        <div class="val" id="utilization">0%</div>
+      </div>
+      <div class="tile">
+        <div class="label">Max Wait (min)</div>
+        <div class="val" id="maxWait">0</div>
+      </div>
+      <div class="tile">
+        <div class="label">Throughput</div>
+        <div class="val" id="throughput">0.0/hr</div>
       </div>
     </div>
   </div>
 
+  <div class="card">
+    <h3 class="subtitle">Doctors Status</h3>
+    <div id="doctorStatus" class="doctor-grid"></div>
+  </div>
+
+  <div class="card">
+    <h3 class="subtitle">Priority Queue</h3>
+    <div id="queueDisplay" class="queue-section">
+      <div class="text-center" style="color:var(--muted); padding:20px">No patients waiting</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chart-container">
+      <div class="chart-title">Queue Length Over Time</div>
+      <svg id="queueChart" viewBox="0 0 500 180"></svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chart-container">
+      <div class="chart-title">Patients by Severity</div>
+      <svg id="severityChart" viewBox="0 0 500 180"></svg>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ------------------------
-   Utility & Random helpers
--------------------------*/
-const rng = {
-  // exponential(mean) for inter-arrivals / service times
-  exp(mean){ if (mean<=0) return 0.0001; return -mean * Math.log(1 - Math.random()); },
-  choice(list){ return list[Math.floor(Math.random()*list.length)]; }
+// Study scenarios with realistic parameters
+const SCENARIOS = {
+  crisis: { doctors: 3, arrivals: 30, criticalTime: 15, seriousTime: 8, mildTime: 4 },
+  staffing: { doctors: 5, arrivals: 30, criticalTime: 15, seriousTime: 8, mildTime: 4 },
+  process: { doctors: 4, arrivals: 30, criticalTime: 12, seriousTime: 6, mildTime: 3 }
 };
 
-const sevOrder = { Critical: 0, Serious: 1, Mild: 2 };
-const sevColors = { Critical: 'critical', Serious: 'serious', Mild: 'mild' };
-
-/* ------------------------
-   Simulation State
--------------------------*/
-const state = {
-  running:false,
-  simTime:0,                 // minutes
-  speed:30,                  // simulated seconds per real second (set from UI as ×)
-  tickRealMs: 200,           // real ms per tick
-  nextArrivalAt: 0,          // min (sim)
-  params:{
-    lambda:1.2,              // arrivals per minute
-    svc:{ Critical:12, Serious:7, Mild:3.5 },  // mean service time (min)
-    numDoctors:3,
-    autoArrivals:true
+// Simulation state
+let sim = {
+  running: false,
+  time: 0,
+  speed: 5,
+  doctors: 3,
+  arrivalsPerHour: 30,
+  serviceTimes: { critical: 15, serious: 8, mild: 4 },
+  
+  queue: [],
+  doctorList: [],
+  stats: {
+    arrivals: 0,
+    treated: 0,
+    waitTimes: [],
+    maxWait: 0,
+    treatedCount: { critical: 0, serious: 0, mild: 0 }
   },
-  // Queues & servers
-  queue:[],
-  servers:[],                // {busy:false, patient:null, remaining:0, busyAccum:0}
-  // Stats
-  arrivals:0,
-  treated:0,
-  waits:[],                  // each patient's wait
-  maxWait:0,
-  queueArea:0,               // for average queue length (time integral)
-  lastQueueSampleTime:0,
-  treatedBySeverity:{Critical:0,Serious:0,Mild:0},
-  // Charts
-  queueSeries:[]             // [{t, q}]
+  history: { queue: [], time: [] }
 };
 
-/* ------------------------
-   Patient Factory
--------------------------*/
-let pidCounter = 1;
-function newPatient() {
-  // Severity distribution (tweakable)
-  const r = Math.random();
-  const severity = r < 0.2 ? 'Critical' : (r < 0.55 ? 'Serious' : 'Mild');
+let patientId = 1;
+
+// Patient generation with proper distribution
+function createPatient() {
+  const rand = Math.random();
+  let severity;
+  if (rand < 0.20) severity = 'critical';
+  else if (rand < 0.55) severity = 'serious';
+  else severity = 'mild';
+
   return {
-    id: pidCounter++,
-    name: `Patient ${String(pidCounter-1).padStart(3,'0')}`,
+    id: patientId++,
+    name: `P${(patientId-1).toString().padStart(3,'0')}`,
     severity,
-    arrivedAt: state.simTime,
-    startedAt: null,
-    wait: 0,
+    arrivalTime: sim.time,
+    waitTime: 0,
+    serviceStartTime: null
   };
 }
 
-/* ------------------------
-   Queue Ops (priority by severity, then FIFO)
--------------------------*/
-function enqueue(p){
-  state.queue.push(p);
-  state.queue.sort((a,b)=>{
-    const s = sevOrder[a.severity]-sevOrder[b.severity];
-    return s!==0 ? s : a.arrivedAt - b.arrivedAt;
+// Initialize doctors
+function initializeDoctors() {
+  sim.doctorList = [];
+  for(let i = 0; i < sim.doctors; i++) {
+    sim.doctorList.push({
+      id: i + 1,
+      busy: false,
+      patient: null,
+      timeRemaining: 0,
+      totalBusyTime: 0
+    });
+  }
+}
+
+// Queue management with priority
+function addToQueue(patient) {
+  sim.queue.push(patient);
+  sim.queue.sort((a, b) => {
+    const priority = { critical: 1, serious: 2, mild: 3 };
+    if (priority[a.severity] !== priority[b.severity]) {
+      return priority[a.severity] - priority[b.severity];
+    }
+    return a.arrivalTime - b.arrivalTime;
   });
 }
 
-function tryStartService(){
-  for (const s of state.servers){
-    if (s.busy) continue;
-    if (state.queue.length===0) break;
-    const p = state.queue.shift();
-    p.startedAt = state.simTime;
-    p.wait = p.startedAt - p.arrivedAt;
-    state.waits.push(p.wait);
-    if (p.wait > state.maxWait) state.maxWait = p.wait;
-
-    s.busy = true;
-    s.patient = p;
-    const mean = state.params.svc[p.severity] || 5;
-    s.remaining = rng.exp(mean); // exponential service
-  }
-}
-
-/* ------------------------
-   Simulation Lifecycle
--------------------------*/
-function reset(){
-  state.running=false;
-  state.simTime=0;
-  state.nextArrivalAt=0;
-  state.params.lambda = +el.arrivalRate.value;
-  state.params.numDoctors = +el.numDoctors.value;
-  state.params.svc.Critical = +el.svcCritical.value;
-  state.params.svc.Serious = +el.svcSerious.value;
-  state.params.svc.Mild = +el.svcMild.value;
-  state.params.autoArrivals = el.autoArrivals.value==='on';
-  state.speed = +el.speed.value;
-
-  state.queue.length=0;
-  state.servers = Array.from({length: state.params.numDoctors}, ()=>({busy:false, patient:null, remaining:0, busyAccum:0}));
-  state.arrivals=0; state.treated=0; state.waits=[]; state.maxWait=0; state.queueArea=0;
-  state.lastQueueSampleTime=0; state.queueSeries=[{t:0,q:0}];
-  state.treatedBySeverity={Critical:0,Serious:0,Mild:0};
-  drawUI(true);
-}
-
-function start(){
-  if (state.running) return;
-  state.running=true;
-}
-
-function stop(){
-  state.running=false;
-}
-
-function addRandomPatient(){
-  const p = newPatient();
-  enqueue(p);
-  state.arrivals++;
-  drawUI();
-}
-
-/* ------------------------
-   Core Tick
--------------------------*/
-let tickHandle = null;
-function loop(){
-  // schedule next
-  tickHandle = setTimeout(loop, state.tickRealMs);
-
-  const simStepMin = (state.speed * state.tickRealMs) / 60000; // convert to minutes
-  const tEnd = state.simTime + simStepMin;
-
-  // integrate queue length for average Lq
-  state.queueArea += state.queue.length * simStepMin;
-
-  // arrivals (Poisson-ish by thinning)
-  if (state.params.autoArrivals && state.params.lambda>0){
-    // probability of ≥1 arrival in dt: 1 - e^{-λ dt}; we sample using Poisson, but simple Bernoulli works fine here
-    const meanArrivals = state.params.lambda * simStepMin;
-    let k = poissonSample(meanArrivals);
-    while (k-- > 0){
-      const p = newPatient();
-      enqueue(p);
-      state.arrivals++;
+// Assign patients to available doctors
+function processQueue() {
+  for(let doctor of sim.doctorList) {
+    if (!doctor.busy && sim.queue.length > 0) {
+      const patient = sim.queue.shift();
+      patient.serviceStartTime = sim.time;
+      patient.waitTime = sim.time - patient.arrivalTime;
+      
+      sim.stats.waitTimes.push(patient.waitTime);
+      if (patient.waitTime > sim.stats.maxWait) {
+        sim.stats.maxWait = patient.waitTime;
+      }
+      
+      doctor.busy = true;
+      doctor.patient = patient;
+      doctor.timeRemaining = exponentialRandom(sim.serviceTimes[patient.severity]);
     }
   }
+}
 
-  // service progression
-  for (const s of state.servers){
-    if (s.busy){
-      const dec = simStepMin;
-      s.remaining -= dec;
-      s.busyAccum += dec;
-      if (s.remaining <= 0){
-        // complete
-        state.treated++;
-        state.treatedBySeverity[s.patient.severity]++;
-        s.busy=false;
-        s.patient=null;
-        s.remaining=0;
+// Exponential random number generator
+function exponentialRandom(mean) {
+  return -mean * Math.log(Math.random());
+}
+
+// Main simulation step
+function simulateStep() {
+  const deltaTime = 1; // 1 minute steps
+  
+  // Generate patient arrivals (Poisson process)
+  const arrivalRate = sim.arrivalsPerHour / 60; // Convert to per minute
+  if (Math.random() < arrivalRate * deltaTime) {
+    const patient = createPatient();
+    addToQueue(patient);
+    sim.stats.arrivals++;
+  }
+  
+  // Update doctor states
+  for(let doctor of sim.doctorList) {
+    if (doctor.busy) {
+      doctor.timeRemaining -= deltaTime;
+      doctor.totalBusyTime += deltaTime;
+      
+      if (doctor.timeRemaining <= 0) {
+        // Patient treatment complete
+        sim.stats.treated++;
+        sim.stats.treatedCount[doctor.patient.severity]++;
+        
+        doctor.busy = false;
+        doctor.patient = null;
+        doctor.timeRemaining = 0;
       }
     }
   }
-
-  // start service for idle servers
-  tryStartService();
-
-  // advance time
-  state.simTime = tEnd;
-
-  // sample for line chart every ~5 sim seconds (~0.0833 min)
-  if (state.simTime - state.lastQueueSampleTime >= (5/60)){
-    state.queueSeries.push({t: state.simTime, q: state.queue.length});
-    // cap series length to keep svg light
-    if (state.queueSeries.length > 300) state.queueSeries.shift();
-    state.lastQueueSampleTime = state.simTime;
+  
+  // Assign waiting patients
+  processQueue();
+  
+  // Update time
+  sim.time += deltaTime;
+  
+  // Record history every 5 minutes
+  if (sim.history.queue.length === 0 || sim.time - sim.history.time[sim.history.time.length-1] >= 5) {
+    sim.history.queue.push(sim.queue.length);
+    sim.history.time.push(sim.time);
+    
+    // Keep only recent history
+    if (sim.history.queue.length > 50) {
+      sim.history.queue.shift();
+      sim.history.time.shift();
+    }
   }
-
-  if (state.running) drawUI();
-}
-function poissonSample(mean){
-  // Knuth's algorithm for small mean; for tiny mean this is very fast
-  let L = Math.exp(-mean), k=0, p=1;
-  do { k++; p *= Math.random(); } while (p > L);
-  return k-1;
 }
 
-/* ------------------------
-   UI Render
--------------------------*/
-const el = {
-  simTime: document.getElementById('simTime'),
-  numDoctors: document.getElementById('numDoctors'),
-  arrivalRate: document.getElementById('arrivalRate'),
-  speed: document.getElementById('speed'),
-  autoArrivals: document.getElementById('autoArrivals'),
-  svcCritical: document.getElementById('svcCritical'),
-  svcSerious: document.getElementById('svcSerious'),
-  svcMild: document.getElementById('svcMild'),
-  addPatientBtn: document.getElementById('addPatientBtn'),
-  startBtn: document.getElementById('startBtn'),
-  stopBtn: document.getElementById('stopBtn'),
-  resetBtn: document.getElementById('resetBtn'),
-  queueList: document.getElementById('queueList'),
-  nowServing: document.getElementById('nowServing'),
-  kArrivals: document.getElementById('kArrivals'),
-  kTreated: document.getElementById('kTreated'),
-  kAvgWait: document.getElementById('kAvgWait'),
-  kMaxWait: document.getElementById('kMaxWait'),
-  kUtil: document.getElementById('kUtil'),
-  kInService: document.getElementById('kInService'),
-  kInQueue: document.getElementById('kInQueue'),
-  kThroughput: document.getElementById('kThroughput'),
-  queueChart: document.getElementById('queueChart'),
-  barChart: document.getElementById('barChart')
-};
-
-function drawUI(first=false){
-  // time
-  el.simTime.textContent = `${state.simTime.toFixed(1)} min`;
-
-  // now serving
-  el.nowServing.innerHTML='';
-  state.servers.forEach((s, i)=>{
-    const div = document.createElement('div');
-    div.className='now-card';
-    div.innerHTML = s.busy
-      ? `<div>
-           <div><strong>Dr ${i+1}</strong> → ${s.patient.name} <span class="sev ${sevColors[s.patient.severity]}">${s.patient.severity}</span></div>
-           <div class="bar"><div style="width:${Math.max(0, 100 - (s.remaining/state.params.svc[s.patient.severity])*100)}%"></div></div>
-         </div>
-         <div class="muted">${Math.max(0,s.remaining).toFixed(1)} min</div>`
-      : `<div><strong>Dr ${i+1}</strong> → <span class="muted">Idle</span></div><div></div>`;
-    el.nowServing.appendChild(div);
+// Load scenario
+function loadScenario(scenarioKey) {
+  const scenario = SCENARIOS[scenarioKey];
+  sim.doctors = scenario.doctors;
+  sim.arrivalsPerHour = scenario.arrivals;
+  sim.serviceTimes = {
+    critical: scenario.criticalTime,
+    serious: scenario.seriousTime,
+    mild: scenario.mildTime
+  };
+  
+  document.getElementById('doctors').value = sim.doctors;
+  document.getElementById('arrivals').value = sim.arrivalsPerHour;
+  
+  // Update button states
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.scenario === scenarioKey);
   });
+  
+  resetSimulation();
+  updateStatus(scenarioKey);
+}
 
-  // queue list
-  el.queueList.innerHTML='';
-  state.queue.forEach(p=>{
-    const row = document.createElement('div');
-    row.className='pat';
-    row.innerHTML = `
-      <div>${p.name} <span class="muted">arr ${p.arrivedAt.toFixed(1)}m</span></div>
-      <span class="sev ${sevColors[p.severity]}">${p.severity}</span>
-    `;
-    el.queueList.appendChild(row);
-  });
+// Update status message
+function updateStatus(scenario) {
+  const statusEl = document.getElementById('status');
+  const avgService = (0.2*sim.serviceTimes.critical + 0.35*sim.serviceTimes.serious + 0.45*sim.serviceTimes.mild);
+  const capacity = sim.doctors * (60 / avgService);
+  const rho = sim.arrivalsPerHour / capacity;
+  
+  if (rho >= 0.8) {
+    statusEl.className = 'alert critical';
+    statusEl.textContent = `${scenario.toUpperCase()}: System overloaded (ρ=${rho.toFixed(2)}). Queue will grow!`;
+  } else if (rho >= 0.7) {
+    statusEl.className = 'alert warning';
+    statusEl.textContent = `${scenario.toUpperCase()}: System stressed (ρ=${rho.toFixed(2)}). Monitor closely.`;
+  } else {
+    statusEl.className = 'alert success';
+    statusEl.textContent = `${scenario.toUpperCase()}: System stable (ρ=${rho.toFixed(2)}). Adequate capacity.`;
+  }
+}
 
-  // KPIs
-  el.kArrivals.textContent = state.arrivals;
-  el.kTreated.textContent = state.treated;
-  const avgWait = state.waits.length ? (state.waits.reduce((a,b)=>a+b,0)/state.waits.length) : 0;
-  el.kAvgWait.textContent = avgWait.toFixed(1);
-  el.kMaxWait.textContent = state.maxWait.toFixed(1);
-  const busySum = state.servers.reduce((a,s)=>a+s.busyAccum,0);
-  const util = state.simTime>0 ? (busySum/(state.simTime*state.servers.length)) : 0;
-  el.kUtil.textContent = (util*100).toFixed(0)+'%';
-  const inService = state.servers.filter(s=>s.busy).length;
-  el.kInService.textContent = inService;
-  el.kInQueue.textContent = state.queue.length;
-  const throughput = state.simTime>0 ? state.treated/state.simTime : 0;
-  el.kThroughput.textContent = throughput.toFixed(2);
+// Reset simulation
+function resetSimulation() {
+  sim.running = false;
+  sim.time = 0;
+  sim.queue = [];
+  sim.stats = {
+    arrivals: 0,
+    treated: 0, 
+    waitTimes: [],
+    maxWait: 0,
+    treatedCount: { critical: 0, serious: 0, mild: 0 }
+  };
+  sim.history = { queue: [], time: [] };
+  patientId = 1;
+  
+  initializeDoctors();
+  updateDisplay();
+  
+  document.getElementById('startBtn').textContent = 'Start Simulation';
+  document.getElementById('startBtn').className = 'btn primary';
+}
 
+// Update all displays
+function updateDisplay() {
+  // Update time
+  document.getElementById('simTime').textContent = `${sim.time.toFixed(1)} min`;
+  
+  // Update metrics
+  document.getElementById('totalArrivals').textContent = sim.stats.arrivals;
+  document.getElementById('totalTreated').textContent = sim.stats.treated;
+  document.getElementById('queueLength').textContent = sim.queue.length;
+  
+  const avgWait = sim.stats.waitTimes.length > 0 ? 
+    sim.stats.waitTimes.reduce((a,b) => a+b, 0) / sim.stats.waitTimes.length : 0;
+  document.getElementById('avgWait').textContent = Math.round(avgWait);
+  document.getElementById('maxWait').textContent = Math.round(sim.stats.maxWait);
+  
+  // Traffic intensity
+  const avgService = (0.2*sim.serviceTimes.critical + 0.35*sim.serviceTimes.serious + 0.45*sim.serviceTimes.mild);
+  const capacity = sim.doctors * (60 / avgService);
+  const rho = sim.arrivalsPerHour / capacity;
+  const rhoEl = document.getElementById('trafficIntensity');
+  rhoEl.textContent = rho.toFixed(2);
+  rhoEl.style.color = rho >= 0.8 ? 'var(--red)' : rho >= 0.7 ? 'var(--amber)' : 'var(--accent)';
+  
+  // Utilization
+  const totalBusyTime = sim.doctorList.reduce((sum, d) => sum + d.totalBusyTime, 0);
+  const util = sim.time > 0 ? (totalBusyTime / (sim.time * sim.doctors)) * 100 : 0;
+  document.getElementById('utilization').textContent = Math.round(util) + '%';
+  
+  // Throughput
+  const throughput = sim.time > 0 ? (sim.stats.treated / sim.time) * 60 : 0;
+  document.getElementById('throughput').textContent = throughput.toFixed(1) + '/hr';
+  
+  // Doctor status
+  updateDoctorDisplay();
+  
+  // Queue display
+  updateQueueDisplay();
+  
   // Charts
-  renderQueueChart();
-  renderBarChart();
-
-  // update controls only on first draw (to avoid overriding user)
-  if (first){
-    el.numDoctors.value = state.params.numDoctors;
-    el.arrivalRate.value = state.params.lambda;
-    el.speed.value = state.speed;
-    el.autoArrivals.value = state.params.autoArrivals ? 'on' : 'off';
-    el.svcCritical.value = state.params.svc.Critical;
-    el.svcSerious.value = state.params.svc.Serious;
-    el.svcMild.value = state.params.svc.Mild;
-  }
+  updateCharts();
 }
 
-function renderQueueChart(){
-  const svg = el.queueChart;
-  const W = 600, H = 220, pad=28;
-  svg.innerHTML='';
-  const data = state.queueSeries;
-  const xmax = data.length? data[data.length-1].t : 1;
-  const xmin = Math.max(0, xmax - 10); // last 10 minutes window
-  const ymax = Math.max(3, ...data.map(d=>d.q), state.params.numDoctors*2);
-
-  // axes
-  const ax = `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#334155"/>
-              <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#334155"/>`;
-  svg.insertAdjacentHTML('beforeend', ax);
-
-  // path
-  if (data.length>1){
-    const pts = data
-      .filter(d=>d.t>=xmin)
-      .map(d=>{
-        const x = pad + ( (d.t-xmin)/(10) ) * (W-2*pad);
-        const y = (H-pad) - (d.q/ymax)*(H-2*pad);
-        return `${x},${y}`;
-      }).join(' ');
-    const path = `<polyline fill="none" stroke="#60a5fa" stroke-width="2" points="${pts}"></polyline>`;
-    svg.insertAdjacentHTML('beforeend', path);
-  }
-
-  // labels
-  const tLabel = `<text x="${W/2}" y="${H-6}" fill="#94a3b8" font-size="11" text-anchor="middle">Last 10 sim minutes</text>`;
-  const qLabel = `<text x="10" y="${H/2}" fill="#94a3b8" font-size="11" transform="rotate(-90 10 ${H/2})" text-anchor="middle">Queue length</text>`;
-  svg.insertAdjacentHTML('beforeend', tLabel+qLabel);
-}
-
-function renderBarChart(){
-  const svg = el.barChart;
-  const W=600, H=220, pad=28;
-  svg.innerHTML='';
-  const cats = ['Critical','Serious','Mild'];
-  const vals = cats.map(c=>state.treatedBySeverity[c]);
-  const vmax = Math.max(1, ...vals);
-  const barW = (W-2*pad)/ (cats.length*1.8);
-  cats.forEach((c, i)=>{
-    const x = pad + i*barW*1.8 + barW*0.4;
-    const h = ((vals[i]/vmax) * (H-2*pad));
-    const y = (H-pad) - h;
-    const color = c==='Critical' ? '#ef4444' : c==='Serious' ? '#f59e0b' : '#22c55e';
-    const rect = `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="6" fill="${color}"></rect>`;
-    const label = `<text x="${x+barW/2}" y="${H-pad+12}" fill="#94a3b8" font-size="11" text-anchor="middle">${c}</text>`;
-    const val = `<text x="${x+barW/2}" y="${y-6}" fill="#cbd5e1" font-size="12" text-anchor="middle" font-weight="700">${vals[i]}</text>`;
-    svg.insertAdjacentHTML('beforeend', rect+label+val);
+function updateDoctorDisplay() {
+  const container = document.getElementById('doctorStatus');
+  container.innerHTML = '';
+  
+  sim.doctorList.forEach(doctor => {
+    const div = document.createElement('div');
+    div.className = 'doctor-card';
+    
+    if (doctor.busy && doctor.patient) {
+      const serviceTime = sim.serviceTimes[doctor.patient.severity];
+      const progress = Math.max(0, 100 - (doctor.timeRemaining / serviceTime) * 100);
+      
+      div.innerHTML = `
+        <div><strong>Dr ${doctor.id}</strong></div>
+        <div>Treating: ${doctor.patient.name}</div>
+        <div><span class="sev ${doctor.patient.severity}">${doctor.patient.severity.toUpperCase()}</span></div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px">
+          ${Math.max(0, doctor.timeRemaining).toFixed(1)} min remaining
+        </div>
+      `;
+    } else {
+      div.innerHTML = `
+        <div><strong>Dr ${doctor.id}</strong></div>
+        <div style="color:var(--muted)">Available</div>
+      `;
+    }
+    
+    container.appendChild(div);
   });
-
-  // axes
-  const ax = `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#334155"/>
-              <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#334155"/>`;
-  svg.insertAdjacentHTML('beforeend', ax);
 }
 
-/* ------------------------
-   Events & Wiring
--------------------------*/
-el.addPatientBtn.addEventListener('click', ()=> addRandomPatient());
-el.startBtn.addEventListener('click', ()=> { start(); });
-el.stopBtn.addEventListener('click', ()=> { stop(); });
-el.resetBtn.addEventListener('click', ()=> { reset(); });
-
-el.numDoctors.addEventListener('change', ()=>{
-  const n = Math.max(1, Math.min(10, +el.numDoctors.value||1));
-  const cur = state.servers.length;
-  if (n>cur){
-    for (let i=0;i<n-cur;i++) state.servers.push({busy:false, patient:null, remaining:0, busyAccum:0});
-  } else if (n<cur){
-    state.servers.length = n; // if a busy server is cut, it's a simplification
+function updateQueueDisplay() {
+  const container = document.getElementById('queueDisplay');
+  
+  if (sim.queue.length === 0) {
+    container.innerHTML = '<div class="text-center" style="color:var(--muted); padding:20px">No patients waiting</div>';
+    return;
   }
-  drawUI();
-});
-el.arrivalRate.addEventListener('change', ()=> state.params.lambda = Math.max(0, +el.arrivalRate.value||0));
-el.speed.addEventListener('change', ()=> state.speed = +el.speed.value);
-el.autoArrivals.addEventListener('change', ()=> state.params.autoArrivals = el.autoArrivals.value==='on');
-el.svcCritical.addEventListener('change', ()=> state.params.svc.Critical = Math.max(0.1, +el.svcCritical.value||0.1));
-el.svcSerious.addEventListener('change', ()=> state.params.svc.Serious = Math.max(0.1, +el.svcSerious.value||0.1));
-el.svcMild.addEventListener('change', ()=> state.params.svc.Mild = Math.max(0.1, +el.svcMild.value||0.1));
+  
+  container.innerHTML = '';
+  sim.queue.forEach((patient, index) => {
+    const waitTime = sim.time - patient.arrivalTime;
+    const div = document.createElement('div');
+    div.className = 'patient-card';
+    
+    div.innerHTML = `
+      <div>
+        <strong>${patient.name}</strong>
+        <div style="font-size:11px; color:var(--muted)">Waiting: ${Math.round(waitTime)} min</div>
+      </div>
+      <span class="sev ${patient.severity}">${patient.severity.toUpperCase()}</span>
+    `;
+    
+    container.appendChild(div);
+  });
+}
 
-/* Boot */
-reset();
-loop(); // keep UI fresh even when paused
+function updateCharts() {
+  // Queue chart
+  const queueSvg = document.getElementById('queueChart');
+  queueSvg.innerHTML = '';
+  
+  if (sim.history.queue.length > 1) {
+    const maxQueue = Math.max(10, ...sim.history.queue);
+    const width = 500, height = 180, pad = 40;
+    
+    // Draw line
+    let pathData = '';
+    sim.history.queue.forEach((q, i) => {
+      const x = pad + (i / (sim.history.queue.length - 1)) * (width - 2*pad);
+      const y = height - pad - (q / maxQueue) * (height - 2*pad);
+      pathData += (i === 0 ? 'M' : 'L') + x + ',' + y;
+    });
+    
+    queueSvg.innerHTML = `
+      <path d="${pathData}" fill="none" stroke="#60a5fa" stroke-width="3"/>
+      <line x1="${pad}" y1="${height-pad}" x2="${width-pad}" y2="${height-pad}" stroke="#6b7280" stroke-width="1"/>
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height-pad}" stroke="#6b7280" stroke-width="1"/>
+      <text x="${width/2}" y="${height-10}" fill="#9ca3af" font-size="12" text-anchor="middle">Time</text>
+      <text x="15" y="${height/2}" fill="#9ca3af" font-size="12" text-anchor="middle" transform="rotate(-90 15 ${height/2})">Queue</text>
+    `;
+  }
+  
+  // Severity chart
+  const severitySvg = document.getElementById('severityChart');
+  const counts = [
+    sim.stats.treatedCount.critical,
+    sim.stats.treatedCount.serious, 
+    sim.stats.treatedCount.mild
+  ];
+  const maxCount = Math.max(1, ...counts);
+  const width = 500, height = 180, pad = 40;
+  const barWidth = (width - 2*pad) / 4;
+  
+  severitySvg.innerHTML = `
+    <line x1="${pad}" y1="${height-pad}" x2="${width-pad}" y2="${height-pad}" stroke="#6b7280" stroke-width="1"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height-pad}" stroke="#6b7280" stroke-width="1"/>
+  `;
+  
+  const colors = ['#ef4444', '#f59e0b', '#22c55e'];
+  const labels = ['Critical', 'Serious', 'Mild'];
+  
+  counts.forEach((count, i) => {
+    const x = pad + (i + 0.5) * barWidth;
+    const barHeight = (count / maxCount) * (height - 2*pad);
+    const y = height - pad - barHeight;
+    
+    severitySvg.innerHTML += `
+      <rect x="${x}" y="${y}" width="${barWidth*0.8}" height="${barHeight}" fill="${colors[i]}" rx="4"/>
+      <text x="${x + barWidth*0.4}" y="${height-pad+15}" fill="#9ca3af" font-size="11" text-anchor="middle">${labels[i]}</text>
+      <text x="${x + barWidth*0.4}" y="${y-5}" fill="#e5e7eb" font-size="12" text-anchor="middle">${count}</text>
+    `;
+  });
+}
+
+// Event handlers
+document.addEventListener('DOMContentLoaded', () => {
+  // Scenario buttons
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      loadScenario(btn.dataset.scenario);
+    });
+  });
+  
+  // Control buttons
+  document.getElementById('startBtn').addEventListener('click', () => {
+    if (sim.running) {
+      sim.running = false;
+      document.getElementById('startBtn').textContent = 'Start Simulation';
+      document.getElementById('startBtn').className = 'btn primary';
+    } else {
+      sim.running = true;
+      document.getElementById('startBtn').textContent = 'Running...';
+      document.getElementById('startBtn').className = 'btn success';
+    }
+  });
+  
+  document.getElementById('stopBtn').addEventListener('click', () => {
+    sim.running = false;
+    document.getElementById('startBtn').textContent = 'Start Simulation';
+    document.getElementById('startBtn').className = 'btn primary';
+  });
+  
+  document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+  
+  document.getElementById('addPatientBtn').addEventListener('click', () => {
+    const patient = createPatient();
+    addToQueue(patient);
+    sim.stats.arrivals++;
+    updateDisplay();
+  });
+  
+  // Parameter changes
+  document.getElementById('doctors').addEventListener('change', (e) => {
+    sim.doctors = parseInt(e.target.value);
+    resetSimulation();
+  });
+  
+  document.getElementById('arrivals').addEventListener('change', (e) => {
+    sim.arrivalsPerHour = parseInt(e.target.value);
+  });
+  
+  document.getElementById('speed').addEventListener('change', (e) => {
+    sim.speed = parseInt(e.target.value);
+  });
+  
+  // Initialize
+  loadScenario('crisis');
+  
+  // Main loop
+  setInterval(() => {
+    if (sim.running) {
+      for(let i = 0; i < sim.speed; i++) {
+        simulateStep();
+      }
+    }
+    updateDisplay();
+  }, 1000);
+});
 </script>
 </body>
 </html>
